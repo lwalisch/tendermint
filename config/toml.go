@@ -132,6 +132,10 @@ prof_laddr = "{{ .BaseConfig.ProfListenAddress }}"
 # so the app can decide if we should keep the connection or not
 filter_peers = {{ .BaseConfig.FilterPeers }}
 
+# Enable or disable Uncoordinated Validator Management (UVM). 
+# If enabled, the proposer appends a nonce transaction to the block
+uvm = {{ .BaseConfig.UVM }}
+
 ##### advanced configuration options #####
 
 ##### rpc server configuration options #####

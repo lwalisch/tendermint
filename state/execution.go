@@ -10,6 +10,7 @@ import (
 	mempl "github.com/tendermint/tendermint/mempool"
 	"github.com/tendermint/tendermint/proxy"
 	"github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/uvm"
 	dbm "github.com/tendermint/tm-db"
 )
 
@@ -37,6 +38,12 @@ type BlockExecutor struct {
 	logger log.Logger
 
 	metrics *Metrics
+
+	// Defaults to false. Can be enabled through the BlockExecutorWithUVM option
+	uvmEnabled bool
+
+	// Only required if uvmEnabled is true and is set through the BlockExecutorWithUVM option
+	validatorKeyPair *uvm.KeyPair
 }
 
 type BlockExecutorOption func(executor *BlockExecutor)
@@ -47,17 +54,32 @@ func BlockExecutorWithMetrics(metrics *Metrics) BlockExecutorOption {
 	}
 }
 
+// BlockExecutorWithUVM can be added as option for creating a new BlockExecutor.
+// It requires the path to the private validator key file as UVM needs to sign a
+// tx with the priv validator key. This function sets the uvm flag, to enable uvm support.
+func BlockExecutorWithUVM(validatorKeyFilePath string, enableUVM bool) BlockExecutorOption {
+	return func(blockExec *BlockExecutor) {
+		if enableUVM {
+			blockExec.uvmEnabled = true
+			validatorKeyPair := uvm.ParseKeyFile(validatorKeyFilePath)
+			blockExec.validatorKeyPair = &validatorKeyPair
+		}
+	}
+}
+
 // NewBlockExecutor returns a new BlockExecutor with a NopEventBus.
 // Call SetEventBus to provide one.
 func NewBlockExecutor(db dbm.DB, logger log.Logger, proxyApp proxy.AppConnConsensus, mempool mempl.Mempool, evpool EvidencePool, options ...BlockExecutorOption) *BlockExecutor {
 	res := &BlockExecutor{
-		db:       db,
-		proxyApp: proxyApp,
-		eventBus: types.NopEventBus{},
-		mempool:  mempool,
-		evpool:   evpool,
-		logger:   logger,
-		metrics:  NopMetrics(),
+		db:               db,
+		proxyApp:         proxyApp,
+		eventBus:         types.NopEventBus{},
+		mempool:          mempool,
+		evpool:           evpool,
+		logger:           logger,
+		metrics:          NopMetrics(),
+		uvmEnabled:       false,
+		validatorKeyPair: nil,
 	}
 
 	for _, option := range options {
@@ -86,9 +108,18 @@ func (blockExec *BlockExecutor) CreateProposalBlock(
 	state State, commit *types.Commit,
 	proposerAddr []byte,
 ) (*types.Block, *types.PartSet) {
+	var (
+		proposerNonceTx     types.Tx = nil
+		proposerNonceTxSize int64    = 0
+	)
 
+	fmt.Printf("UVM enabled: %v\n", blockExec.uvmEnabled)
 	maxBytes := state.ConsensusParams.Block.MaxBytes
 	maxGas := state.ConsensusParams.Block.MaxGas
+
+	if blockExec.uvmEnabled {
+		proposerNonceTx, proposerNonceTxSize = uvm.GetProposerNonceTx(blockExec.validatorKeyPair)
+	}
 
 	// Fetch a limited amount of valid evidence
 	maxNumEvidence, _ := types.MaxEvidencePerBlock(maxBytes)
@@ -96,7 +127,16 @@ func (blockExec *BlockExecutor) CreateProposalBlock(
 
 	// Fetch a limited amount of valid txs
 	maxDataBytes := types.MaxDataBytes(maxBytes, state.Validators.Size(), len(evidence))
+
+	if blockExec.uvmEnabled {
+		maxDataBytes -= proposerNonceTxSize
+	}
+
 	txs := blockExec.mempool.ReapMaxBytesMaxGas(maxDataBytes, maxGas)
+
+	if blockExec.uvmEnabled {
+		txs = append(txs, proposerNonceTx)
+	}
 
 	return state.MakeBlock(height, txs, commit, evidence, proposerAddr)
 }

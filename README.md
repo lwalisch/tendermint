@@ -1,3 +1,18 @@
+# Tendermint with UVM support
+
+### Build version 0.32.6. with UVM support:
+
+```
+git checkout 0_32_6_uvm
+cd cmd/tendermint
+go build
+```
+This creates a Tendermint executable in the current directory.
+
+
+
+---------------------------------------------------------------------------------
+
 # Tendermint
 
 ![banner](docs/tendermint-core-image.jpg)

@@ -208,6 +208,10 @@ type BaseConfig struct {
 	// If true, query the ABCI app on connecting to a new peer
 	// so the app can decide if we should keep the connection or not
 	FilterPeers bool `mapstructure:"filter_peers"` // false
+
+	// Enable or disable Uncoordinated Validator Management (UVM).
+	// If enabled, the proposer appends a nonce transaction to the block
+	UVM bool `mapstructure:"uvm"` // false
 }
 
 // DefaultBaseConfig returns a default base configuration for a Tendermint node
@@ -227,6 +231,7 @@ func DefaultBaseConfig() BaseConfig {
 		FilterPeers:        false,
 		DBBackend:          "goleveldb",
 		DBPath:             "data",
+		UVM:                false,
 	}
 }
 
@@ -765,7 +770,7 @@ func DefaultConsensusConfig() *ConsensusConfig {
 		TimeoutPrecommitDelta:       500 * time.Millisecond,
 		TimeoutCommit:               1000 * time.Millisecond,
 		SkipTimeoutCommit:           false,
-		CreateEmptyBlocks:           true,
+		CreateEmptyBlocks:           false,
 		CreateEmptyBlocksInterval:   0 * time.Second,
 		PeerGossipSleepDuration:     100 * time.Millisecond,
 		PeerQueryMaj23SleepDuration: 2000 * time.Millisecond,

@@ -555,6 +555,8 @@ func NewNode(config *cfg.Config,
 		return nil, err
 	}
 
+	fmt.Println("Tendermint 0.32.6 with UVM support. Modifications by Lukas Walisch\n", config.BaseConfig.PrivValidatorKeyFile())
+
 	// Create the proxyApp and establish connections to the ABCI app (consensus, mempool, query).
 	proxyApp, err := createAndStartProxyAppConns(clientCreator, logger)
 	if err != nil {
@@ -621,6 +623,8 @@ func NewNode(config *cfg.Config,
 		return nil, err
 	}
 
+	fmt.Println("UVM enabled: ", config.BaseConfig.UVM)
+
 	// make block executor for consensus and blockchain reactors to execute blocks
 	blockExec := sm.NewBlockExecutor(
 		stateDB,
@@ -629,6 +633,7 @@ func NewNode(config *cfg.Config,
 		mempool,
 		evidencePool,
 		sm.BlockExecutorWithMetrics(smMetrics),
+		sm.BlockExecutorWithUVM(config.BaseConfig.PrivValidatorKeyFile(), config.BaseConfig.UVM),
 	)
 
 	// Make BlockchainReactor
