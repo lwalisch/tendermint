@@ -227,7 +227,7 @@ func DefaultBaseConfig() BaseConfig {
 		LogLevel:           DefaultPackageLogLevels(),
 		LogFormat:          LogFormatPlain,
 		ProfListenAddress:  "",
-		FastSyncMode:       true,
+		FastSyncMode:       false,
 		FilterPeers:        false,
 		DBBackend:          "goleveldb",
 		DBPath:             "data",

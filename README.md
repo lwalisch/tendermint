@@ -2,8 +2,11 @@
 
 ### Build version 0.32.6. with UVM support:
 
+Make sure Go is installed (See the installation instructions). 
+
 ```
 git checkout 0_32_6_uvm
+make tools
 cd cmd/tendermint
 go build
 ```
